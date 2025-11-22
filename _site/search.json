@@ -1,0 +1,30 @@
+[
+  {
+    "objectID": "posts/atividade3/index.html",
+    "href": "posts/atividade3/index.html",
+    "title": "Atividade 3 – Regressão Linear",
+    "section": "",
+    "text": "Gráfico da Regressão Linear\n\n\n# Importa bibliotecas\nimport numpy as np\nimport pandas as pd\nfrom plotnine import ggplot, aes, geom_point, geom_abline, ggtitle\n\n# Carrega os valores\nX = np.loadtxt(\"X.txt\")\ny = np.loadtxt(\"y.txt\")\n\n# Matriz para cálculo da regressão\nX_design = np.c_[np.ones(X.shape[0]), X]\n\n# Fórmula da regressão\nbeta = np.linalg.inv(X_design.T @ X_design) @ X_design.T @ y\na, b = beta[0], beta[1]\n\n# DataFrame\ndf = pd.DataFrame({\"x\": X, \"y\": y})\n\n# Gráfico\nplot = (\n    ggplot(df, aes(\"x\", \"y\"))\n    + geom_point()\n    + geom_abline(intercept=a, slope=b)\n    + ggtitle(\"Anos de Estudo x Salário\")\n)\n\nprint(plot)\nplot.save(\"grafico_regressao.png\")"
+  },
+  {
+    "objectID": "posts/atividade1/index.html",
+    "href": "posts/atividade1/index.html",
+    "title": "Atividade 1 – Cotação do Dólar",
+    "section": "",
+    "text": "Gráfico do dólar\n\n\n# Importa as bibliotecas\nimport requests\nimport pandas as pd\nimport plotly.express as px\nimport calendar\nfrom datetime import datetime\n\ndef grafico_dolar_mensal(mmyyyy: str):\n    # Converte MMYYYY para datas\n    first_date = datetime.strptime(mmyyyy, \"%m%Y\")\n    last_day = calendar.monthrange(first_date.year, first_date.month)[1]\n    last_date = first_date.replace(day=last_day)\n\n    # Prepara datas para API\n    data_inicio = first_date.strftime(\"%m-%d-%Y\")\n    data_fim = last_date.strftime(\"%m-%d-%Y\")\n\n    # URL da API\n    url = (\n        \"https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/\"\n        \"CotacaoDolarPeriodo(dataInicial=@dataInicial,dataFinalCotacao=@dataFinalCotacao)\"\n        f\"?@dataInicial='{data_inicio}'&@dataFinalCotacao='{data_fim}'\"\n        \"&$format=json&$select=cotacaoCompra,dataHoraCotacao\"\n    )\n\n    # Busca dados\n    r = requests.get(url).json()[\"value\"]\n\n    # Organiza em DataFrame\n    df = pd.DataFrame(r)\n    df[\"data\"] = pd.to_datetime(df[\"dataHoraCotacao\"]).dt.date\n    df = df.rename(columns={\"cotacaoCompra\": \"cotacao\"})\n    df = df[[\"data\", \"cotacao\"]]\n\n    # Filtra o mês\n    df = df[(df[\"data\"] &gt;= first_date.date()) & (df[\"data\"] &lt;= last_date.date())]\n\n    # Cria todos os dias para preencher falhas\n    todos_dias = pd.date_range(start=first_date, end=last_date).date\n    df_full = pd.DataFrame({\"data\": todos_dias})\n    df_full = df_full.merge(df, on=\"data\", how=\"left\")\n    df_full[\"cotacao\"] = df_full[\"cotacao\"].ffill()\n\n    # Gráfico Plotly\n    fig = px.line(df_full, x=\"data\", y=\"cotacao\", markers=True,\n                  title=f\"Cotação do dólar — {mmyyyy[:2]}/{mmyyyy[2:]}\")\n    fig.show()\n\n    return df_full\ngrafico_dolar_mensal(\"102015\")"
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Atividades de Algoritmos Gabriel Henrique",
+    "section": "",
+    "text": "Bem-vindo\nEste blog contém as atividades realizadas na disciplina de Algoritmos.\nClique em uma atividade para visualizar:\n\nAtividade 1 – Cotação do Dólar\nAtividade 2 – Monitoramento de Ônibus\nAtividade 3 – Regressão Linear"
+  },
+  {
+    "objectID": "posts/atividade2/index.html",
+    "href": "posts/atividade2/index.html",
+    "title": "Atividade 2 – Monitoramento de Ônibus",
+    "section": "",
+    "text": "Mapa das Linhas\n\n\n# Importa bibliotecas\nimport requests\nfrom folium import Map, Marker, Icon\n\n# Configurações da API\nTOKEN = \"0bcedc5fb833ad11ab7d362a8df8838e587bf07991a463e111fc04c17f240ab5\"\nLINHA = \"948A\"\nSENTIDO = 1  # 1 = ida, 2 = volta\n\n# Autenticação\nsess = requests.Session()\nsess.post(\"http://api.olhovivo.sptrans.com.br/v2.1/Login/Autenticar\",\n          params={\"token\": TOKEN})\n\n# Busca a linha\nlinha = sess.get(\"http://api.olhovivo.sptrans.com.br/v2.1/Linha/Buscar\",\n                 params={\"termosBusca\": LINHA}).json()\ncodigo = linha[0][\"cl\"]\n\n# Busca paradas\nparadas_raw = sess.get(\n    \"http://api.olhovivo.sptrans.com.br/v2.1/Parada/BuscarParadasPorLinha\",\n    params={\"codigoLinha\": codigo}\n).json()\n\nparadas = [p for p in paradas_raw if \"py\" in p and \"px\" in p]\n\n# Posição dos ônibus\npos = sess.get(\"http://api.olhovivo.sptrans.com.br/v2.1/Posicao/Linha\",\n               params={\"codigoLinha\": codigo}).json()\n\nveiculos = [v for v in pos.get(\"vs\", []) if v.get(\"sl\") == SENTIDO]\n\n# Mapa\nm = Map(location=[paradas[0][\"py\"], paradas[0][\"px\"]], zoom_start=13)\n\n# Marca paradas\nfor p in paradas:\n    Marker([p[\"py\"], p[\"px\"]], popup=p.get(\"np\", \"Parada\"),\n           icon=Icon(color=\"blue\")).add_to(m)\n\n# Marca ônibus\nfor v in veiculos:\n    Marker([v[\"py\"], v[\"px\"]], popup=f\"Ônibus {v.get('p', '?')}\",\n           icon=Icon(color=\"red\")).add_to(m)\n\n# Abre o mapa\nm.show_in_browser()"
+  }
+]
