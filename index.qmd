@@ -1,0 +1,13 @@
+---
+title: "Atividades de Algoritmos Gabriel Henrique"
+---
+
+# Bem-vindo
+
+Este blog contém as atividades realizadas na disciplina de Algoritmos.
+
+Clique em uma atividade para visualizar:
+
+- [Atividade 1 – Cotação do Dólar](posts/atividade1/index.html)
+- [Atividade 2 – Monitoramento de Ônibus](posts/atividade2/index.html)
+- [Atividade 3 – Regressão Linear](posts/atividade3/index.html)
